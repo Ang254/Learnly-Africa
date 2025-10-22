@@ -1,0 +1,31 @@
+#!/bin/bash
+
+echo "Updating System"
+sudo yum update -y
+echo "Installing Docker"
+sudo amazon-linux-extras install docker -y || sudo yum install -y docker
+echo "Starting Docker"
+sudo systemctl start docker
+echo "Enabling Docker"
+sudo systemctl enable docker
+echo "Docker Installed"
+sudo docker pull httpd
+echo "
+<h1>Welcome to Learnly Server.</h1>
+<h2>Learning AWS Cloud</h2>
+<h3>See you in class!</h3>" >index.html
+echo "Running Apache container with custom page..."
+
+sudo docker run -d --name my-apache -p 80:80 -v $(pwd)/index.html:/usr/local/apache2/htdocs/index.html httpd
+
+# Get public IP address using ifconfig.me
+IP=$(curl -s ifconfig.me)
+
+echo "
+
+##################################"
+echo "Apache is running in Docker!"
+echo "Visit: http://$IP"
+echo "##################################
+"
+
