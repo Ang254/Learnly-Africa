@@ -1,31 +1,56 @@
 #!/bin/bash
 
-echo "Updating System"
+# Simple script to install Docker, enable it, and run WordPress + MySQL (Amazon Linux 2 / CentOS)
+
+echo "Updating system..."
 sudo yum update -y
-echo "Installing Docker"
+
+echo "Installing Docker..."
 sudo amazon-linux-extras install docker -y || sudo yum install -y docker
-echo "Starting Docker"
+
+echo "Starting Docker..."
 sudo systemctl start docker
-echo "Enabling Docker"
+
+echo "Enabling Docker to start on boot..."
 sudo systemctl enable docker
-echo "Docker Installed"
-sudo docker pull httpd
-echo "
-<h1>Welcome to Learnly Server.</h1>
-<h2>Learning AWS Cloud</h2>
-<h3>See you in class!</h3>" >index.html
-echo "Running Apache container with custom page..."
 
-sudo docker run -d --name my-apache -p 80:80 -v $(pwd)/index.html:/usr/local/apache2/htdocs/index.html httpd
+# Create a Docker network for WordPress and MySQL
+echo "Creating Docker network..."
+sudo docker network create wordpress-net || echo "Network already exists."
 
-# Get public IP address using ifconfig.me
+# Set environment variables
+MYSQL_ROOT_PASSWORD="rootpassword"
+MYSQL_DATABASE="wordpress"
+MYSQL_USER="wpuser"
+MYSQL_PASSWORD="wppassword"
+
+echo "Starting MySQL container..."
+sudo docker run -d \
+  --name wordpress-db \
+  --network wordpress-net \
+  -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD \
+  -e MYSQL_DATABASE=$MYSQL_DATABASE \
+  -e MYSQL_USER=$MYSQL_USER \
+  -e MYSQL_PASSWORD=$MYSQL_PASSWORD \
+  -v mysql_data:/var/lib/mysql \
+  mysql:5.7
+
+echo "Starting WordPress container..."
+sudo docker run -d \
+  --name wordpress-app \
+  --network wordpress-net \
+  -p 80:80 \
+  -e WORDPRESS_DB_HOST=wordpress-db:3306 \
+  -e WORDPRESS_DB_USER=$MYSQL_USER \
+  -e WORDPRESS_DB_PASSWORD=$MYSQL_PASSWORD \
+  -e WORDPRESS_DB_NAME=$MYSQL_DATABASE \
+  -v wordpress_data:/var/www/html \
+  wordpress:latest
+
+# Get public IP address
 IP=$(curl -s ifconfig.me)
 
-echo "
-
-##################################"
-echo "Apache is running in Docker!"
+echo "##################################"
+echo "WordPress + MySQL setup complete!"
 echo "Visit: http://$IP"
-echo "##################################
-"
-
+echo "##################################"
